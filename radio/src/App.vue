@@ -1,8 +1,8 @@
 <template>
   <nav>
-    <router-link to="/">Home</router-link> |
-    <router-link to="/about">About</router-link> |
-    <router-link to="/contatti">Contatti</router-link>
+    <router-link to="/">Radio</router-link> |
+    <router-link to="/about">Preferiti</router-link> |
+    <router-link to="/contatti">Mondo</router-link>
   </nav>
   <router-view/>
 </template>
