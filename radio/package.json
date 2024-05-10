@@ -9,7 +9,10 @@
   },
   "dependencies": {
     "core-js": "^3.8.3",
+    "hls.js": "^1.5.8",
+    "three.js": "^0.77.1",
     "vue": "^3.2.13",
+    "vue-hls-video-player": "^1.0.1",
     "vue-router": "^4.0.3",
     "vuetify": "^3.5.17"
   },

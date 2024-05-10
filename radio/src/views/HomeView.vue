@@ -1,7 +1,16 @@
 <template>
   <v-container>
+    <!-- Barra di ricerca -->
     <v-row>
-      <v-col v-for="(radio, index) in radios" :key="index" cols="3">
+      <v-col cols="12">
+        <v-text-field v-model="searchQuery" label="Cerca per nome" outlined></v-text-field>
+      </v-col>
+    </v-row>
+    
+    <!-- Lista delle radio filtrate -->
+    <v-row>
+      <v-col v-for="(radio, index) in filteredRadios" :key="index" cols="3">
+        <!-- Card della radio -->
         <v-card color="white">
           <div class="d-flex flex-column justify-space-between" style="height: 100%;">
             <div class="d-flex flex-column justify-space-between">
@@ -11,7 +20,12 @@
               </v-avatar>
             </div>
             <v-card-actions class="justify-center">
-              <v-btn icon class="mdi mdi-play"></v-btn>
+              <v-btn icon @click="togglePlayback(radio)">
+                <v-icon>{{ radio.isPlaying ? 'mdi mdi-stop' : 'mdi mdi-play' }}</v-icon>
+              </v-btn>
+              <v-btn icon @click="toggleFavorite(radio)">
+                <v-icon :color="isFavorite(radio) ? 'red' : ''">mdi mdi-heart</v-icon>
+              </v-btn>
             </v-card-actions>
           </div>
         </v-card>
@@ -21,25 +35,104 @@
 </template>
 
 <script>
+import Hls from 'hls.js';
+
 export default {
   name: 'HomeView',
   data() {
     return {
       radios: [],
-      defaultLogo: 'https://fiverr-res.cloudinary.com/images/t_main1,q_auto,f_auto,q_auto,f_auto/gigs/295505491/original/cfbfdfff1c5e32c8ccd5e70f86c8e434a374f431/design-attractive-radio-logo.jpg'
+      defaultLogo: 'https://fiverr-res.cloudinary.com/images/t_main1,q_auto,f_auto,q_auto,f_auto/gigs/295505491/original/cfbfdfff1c5e32c8ccd5e70f86c8e434a374f431/design-attractive-radio-logo.jpg',
+      audio: null,
+      currentRadio: null,
+      favorites: JSON.parse(localStorage.getItem('favorites') || '[]'),
+      searchQuery: ''
     };
+  },
+  computed: {
+    // Filtraggio delle radio in base alla query di ricerca
+    filteredRadios() {
+      return this.radios.filter(radio => {
+        return radio.name.toLowerCase().includes(this.searchQuery.toLowerCase());
+      });
+    }
   },
   methods: {
     getRadios() {
       fetch('https://nl1.api.radio-browser.info/json/stations/search?limit=100&countrycode=IT&hidebroken=true&order=clickcount&reverse=true')
         .then(response => response.json())
         .then(data => {
-          this.radios = data;
+          this.radios = data.map(radio => ({
+            ...radio,
+            isPlaying: false
+          }));
           console.log(data);
         });
     },
     getRadioLogo(radio) {
       return radio.favicon || this.defaultLogo;
+    },
+    playM3U8Radio(radio) {
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(radio.url);
+        hls.attachMedia(this.audio);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          this.audio.play();
+          radio.isPlaying = true;
+          this.currentRadio = radio;
+        });
+      } else if (this.audio.canPlayType('application/vnd.apple.mpegurl')) {
+        this.audio.src = radio.url;
+        this.audio.play();
+        radio.isPlaying = true;
+        this.currentRadio = radio;
+      }
+    },
+    togglePlayback(radio) {
+      if (this.currentRadio && this.currentRadio !== radio) {
+        if (this.currentRadio.hls === '1') {
+          this.audio.pause();
+        } else {
+          this.audio.pause();
+          this.currentRadio.isPlaying = false;
+        }
+      }
+
+      if (radio.isPlaying) {
+        if (radio.hls === '1') {
+          this.audio.pause();
+        } else {
+          this.audio.pause();
+          radio.isPlaying = false;
+        }
+        this.currentRadio = null;
+      } else {
+        if (!this.audio) {
+          this.audio = new Audio();
+        }
+
+        if (radio.hls === '1') {
+          this.playM3U8Radio(radio);
+        } else {
+          this.audio.src = radio.url;
+          this.audio.play();
+          radio.isPlaying = true;
+          this.currentRadio = radio;
+        }
+      }
+    },
+    toggleFavorite(radio) {
+      const index = this.favorites.findIndex(fav => fav.url === radio.url);
+      if (index !== -1) {
+        this.favorites.splice(index, 1);
+      } else {
+        this.favorites.push(radio);
+      }
+      localStorage.setItem('favorites', JSON.stringify(this.favorites));
+    },
+    isFavorite(radio) {
+      return this.favorites.some(fav => fav.url === radio.url);
     }
   },
   created() {
@@ -55,6 +148,18 @@ export default {
   text-overflow: ellipsis;
 }
 </style>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
