@@ -1,16 +1,11 @@
 <template>
   <v-container>
     <!-- Barra di ricerca -->
-    <v-row>
-      <v-col cols="12">
-        <v-text-field v-model="searchQuery" label="Cerca per nome" outlined></v-text-field>
-      </v-col>
-    </v-row>
+    <v-text-field v-model="search" label="Cerca per nome" @input="filterRadios" />
     
     <!-- Lista delle radio filtrate -->
     <v-row>
       <v-col v-for="(radio, index) in filteredRadios" :key="index" cols="3">
-        <!-- Card della radio -->
         <v-card color="white">
           <div class="d-flex flex-column justify-space-between" style="height: 100%;">
             <div class="d-flex flex-column justify-space-between">
@@ -42,18 +37,17 @@ export default {
   data() {
     return {
       radios: [],
-      defaultLogo: 'https://fiverr-res.cloudinary.com/images/t_main1,q_auto,f_auto,q_auto,f_auto/gigs/295505491/original/cfbfdfff1c5e32c8ccd5e70f86c8e434a374f431/design-attractive-radio-logo.jpg',
+      defaultLogo: 'https://fiverr-res.cloudinary.com/images/t_main1,q_auto,f_auto,q_auto,f_auto/gigs/295505491/original/cfbfdfff1c5e32c8ccd5e70f86c8e434a374f431/design-attractive-radio-logo.jpg', // URL dell'immagine predefinita
       audio: null,
       currentRadio: null,
       favorites: JSON.parse(localStorage.getItem('favorites') || '[]'),
-      searchQuery: ''
+      search: ''
     };
   },
   computed: {
-    // Filtraggio delle radio in base alla query di ricerca
     filteredRadios() {
       return this.radios.filter(radio => {
-        return radio.name.toLowerCase().includes(this.searchQuery.toLowerCase());
+        return radio.name.toLowerCase().includes(this.search.toLowerCase());
       });
     }
   },
@@ -72,6 +66,13 @@ export default {
     getRadioLogo(radio) {
       return radio.favicon || this.defaultLogo;
     },
+    playRadio(radio) {
+      if (radio.url.toLowerCase().endsWith('.m3u8')) {
+        this.playM3U8Radio(radio);
+      } else {
+        this.playNormalRadio(radio);
+      }
+    },
     playM3U8Radio(radio) {
       if (Hls.isSupported()) {
         const hls = new Hls();
@@ -82,11 +83,18 @@ export default {
           radio.isPlaying = true;
           this.currentRadio = radio;
         });
-      } else if (this.audio.canPlayType('application/vnd.apple.mpegurl')) {
+      } else {
+        console.error('HLS is not supported');
+      }
+    },
+    playNormalRadio(radio) {
+      if (this.audio.canPlayType('audio/mpeg')) {
         this.audio.src = radio.url;
         this.audio.play();
         radio.isPlaying = true;
         this.currentRadio = radio;
+      } else {
+        console.error('Audio playback is not supported');
       }
     },
     togglePlayback(radio) {
@@ -111,15 +119,7 @@ export default {
         if (!this.audio) {
           this.audio = new Audio();
         }
-
-        if (radio.hls === '1') {
-          this.playM3U8Radio(radio);
-        } else {
-          this.audio.src = radio.url;
-          this.audio.play();
-          radio.isPlaying = true;
-          this.currentRadio = radio;
-        }
+        this.playRadio(radio);
       }
     },
     toggleFavorite(radio) {
@@ -133,6 +133,9 @@ export default {
     },
     isFavorite(radio) {
       return this.favorites.some(fav => fav.url === radio.url);
+    },
+    filterRadios() {
+      // Funzione di filtro già implementata come computed property
     }
   },
   created() {
@@ -148,6 +151,8 @@ export default {
   text-overflow: ellipsis;
 }
 </style>
+
+
 
 
 

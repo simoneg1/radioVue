@@ -28,6 +28,8 @@
 </template>
 
 <script>
+import Hls from 'hls.js';
+
 export default {
   name: 'FavoritesView',
   data() {
@@ -42,24 +44,60 @@ export default {
     getRadioLogo(radio) {
       return radio.favicon || this.defaultLogo;
     },
+    playRadio(radio) {
+      if (radio.url.toLowerCase().endsWith('.m3u8')) {
+        this.playM3U8Radio(radio);
+      } else {
+        this.playNormalRadio(radio);
+      }
+    },
+    playM3U8Radio(radio) {
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(radio.url);
+        hls.attachMedia(this.audio);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          this.audio.play();
+          radio.isPlaying = true;
+          this.currentRadio = radio;
+        });
+      } else {
+        console.error('HLS is not supported');
+      }
+    },
+    playNormalRadio(radio) {
+      if (this.audio.canPlayType('audio/mpeg')) {
+        this.audio.src = radio.url;
+        this.audio.play();
+        radio.isPlaying = true;
+        this.currentRadio = radio;
+      } else {
+        console.error('Audio playback is not supported');
+      }
+    },
     togglePlayback(radio) {
       if (this.currentRadio && this.currentRadio !== radio) {
-        this.audio.pause();
-        this.currentRadio.isPlaying = false;
+        if (this.currentRadio.hls === '1') {
+          this.audio.pause();
+        } else {
+          this.audio.pause();
+          this.currentRadio.isPlaying = false;
+        }
       }
 
       if (radio.isPlaying) {
-        this.audio.pause();
-        radio.isPlaying = false;
+        if (radio.hls === '1') {
+          this.audio.pause();
+        } else {
+          this.audio.pause();
+          radio.isPlaying = false;
+        }
         this.currentRadio = null;
       } else {
         if (!this.audio) {
           this.audio = new Audio();
         }
-        this.audio.src = radio.url;
-        this.audio.play();
-        radio.isPlaying = true;
-        this.currentRadio = radio;
+        this.playRadio(radio);
       }
     },
     toggleFavorite(radio) {
@@ -73,9 +111,10 @@ export default {
     },
     isFavorite(radio) {
       return this.favorites.some(fav => fav.url === radio.url);
-    }
-  }
+    },
+  },
 };
+
 </script>
 
 <style>
