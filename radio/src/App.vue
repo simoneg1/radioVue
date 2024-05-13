@@ -2,7 +2,7 @@
   <nav>
     <router-link to="/">Radio</router-link> |
     <router-link to="/about">Preferiti</router-link> |
-    <router-link to="/contatti">Mondo</router-link>
+    <router-link to="/World">Mondo</router-link>
   </nav>
   <router-view/>
 </template>
